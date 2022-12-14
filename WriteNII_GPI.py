@@ -40,12 +40,12 @@
 
 import gpi
 import numpy as np
-import nibabel as ni
+import nibabel as nib
 
 class ExternalNode(gpi.NodeAPI):
     """Uses the numpy save interface for writing arrays.
 
-    INPUT - numpy array to write
+    INPUT - 3D numpy array to write
 
     WIDGETS:
     File Browser - button to launch file browser, and typein widget, to give pathname for output file
@@ -58,7 +58,7 @@ class ExternalNode(gpi.NodeAPI):
        # Widgets
         self.addWidget(
             'SaveFileBrowser', 'File Browser', button_title='Browse',
-            caption='Save File (*.npy)', filter='numpy (*.npy)')
+            caption='Save File (*.nii)', filter='numpy (*.nii)')
         self.addWidget('PushButton', 'Write Mode', button_title='Write on New Filename', toggle=True)
         self.addWidget('PushButton', 'Write Now', button_title='Write Right Now', toggle=False)
 
@@ -83,17 +83,63 @@ class ExternalNode(gpi.NodeAPI):
     def compute(self):
 
         import numpy as np
+        import nibabel as nib
 
         if self.getVal('Write Mode') or self.getVal('Write Now') or ('File Browser' in self.widgetEvents()):
 
             fname = self.URI(self.getVal('File Browser'))
-            if not fname.endswith('.npy'):
-                fname += '.npy'
+            if not fname.endswith('.nii'):
+                fname += '.nii'
 
-            if fname == '.npy':
+            if fname == '.nii':
                 return 0
 
             data = self.getData('in')
-            np.save(fname, data)
+            
+            # Deal with more than 3 dimensions
+            if np.size(np.shape(data)) >= 3:
+                raise ValueError("Too many (>3) dimensions on input data.")
+            
+            # Build an affine array using matrix multiplication
+            # TODO: add functionality to read in RLS header dictionary to automatically generate affine array. 
+            scaling_affine = np.array([[1, 0, 0, 0],
+                                    [0, 1, 0, 0],
+                                    [0, 0, 1, 0],
+                                    [0, 0, 0, 1]])
+
+            # Rotate gamma radians about axis i
+            cos_gamma = np.cos(0)
+            sin_gamma = np.sin(0)
+            rotation_affine_1 = np.array([[1, 0, 0, 0],
+                                        [0, cos_gamma, -sin_gamma,  0],
+                                        [0, sin_gamma, cos_gamma, 0],
+                                        [0, 0, 0, 1]])
+            cos_gamma = np.cos(np.pi)
+            sin_gamma = np.sin(np.pi)
+            rotation_affine_2 = np.array([[cos_gamma, 0, sin_gamma, 0],
+                                        [0, 1, 0, 0],
+                                        [-sin_gamma, 0, cos_gamma, 0],
+                                        [0, 0, 0, 1]])
+            cos_gamma = np.cos(0)
+            sin_gamma = np.sin(0)
+            rotation_affine_3 = np.array([[cos_gamma, -sin_gamma, 0, 0],
+                                        [sin_gamma, cos_gamma, 0, 0],
+                                        [0, 0, 1, 0],
+                                        [0, 0, 0, 1]])
+            rotation_affine = rotation_affine_1.dot(
+                rotation_affine_2.dot(rotation_affine_3))
+
+            # Apply translation
+            translation_affine = np.array([[1, 0, 0, 0],
+                                        [0, 1, 0, 0],
+                                        [0, 0, 1, 0],
+                                        [0, 0, 0, 1]])
+
+            # Multiply matrices together
+            aff = translation_affine.dot(rotation_affine.dot(scaling_affine))
+            
+            # Save data
+            ni_img = nib.Nifti1Image(abs(data), affine=aff)
+            nib.save(ni_img, fname)
 
         return(0)
