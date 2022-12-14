@@ -1,3 +1,6 @@
+# Template copied from GPI core-node: WriteNPY_GPI.py. 
+# Not an official node!
+
 # Copyright (c) 2014, Dignity Health
 # 
 #     The GPI core node library is licensed under
@@ -32,11 +35,12 @@
 # <http://www.gnu.org/licenses/>.
 
 
-# Author: Nick Zwart
-# Date: 2012sep02
+# Author: Joseph Plummer
+# Date: 2022-12-14
 
 import gpi
 import numpy as np
+import nibabel as ni
 
 class ExternalNode(gpi.NodeAPI):
     """Uses the numpy save interface for writing arrays.
