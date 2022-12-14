@@ -58,7 +58,7 @@ class ExternalNode(gpi.NodeAPI):
        # Widgets
         self.addWidget(
             'SaveFileBrowser', 'File Browser', button_title='Browse',
-            caption='Save File (*.nii)', filter='numpy (*.nii)')
+            caption='Save File (*.nii)', filter='nifti file (*.nii)')
         self.addWidget('PushButton', 'Write Mode', button_title='Write on New Filename', toggle=True)
         self.addWidget('PushButton', 'Write Now', button_title='Write Right Now', toggle=False)
 
@@ -97,7 +97,7 @@ class ExternalNode(gpi.NodeAPI):
             data = self.getData('in')
             
             # Deal with more than 3 dimensions
-            if np.size(np.shape(data)) >= 3:
+            if np.size(np.shape(data)) > 3:
                 raise ValueError("Too many (>3) dimensions on input data.")
             
             # Build an affine array using matrix multiplication
